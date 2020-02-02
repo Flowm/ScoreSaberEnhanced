@@ -42,6 +42,45 @@ export function generate_oneclick(song_hash: string | undefined, size: BulmaSize
 	);
 }
 
+export function generate_lastfm_search(song: object | undefined, lastfm: object, size: BulmaSize): HTMLElement {
+	return create("div", {
+		class: `button icon is-${size} ${toggled_class(size !== "large", "has-tooltip-left")}`,
+		style: {
+			cursor: song === undefined ? "default" : "pointer",
+		},
+		disabled: song === undefined,
+		data: { tooltip: "Show on Last.fm" },
+		onclick() {
+			console.log(song)
+			lastfm.track_search(song).then((tracks) => {
+				console.log("Search results", tracks)
+				new_page(tracks[0].url)
+			})
+		},
+	},
+		create("i", { class: "fas fa-music" }),
+	);
+}
+
+export function generate_lastfm_scrobble(song: object | undefined, lastfm: object, size: BulmaSize): HTMLElement {
+	return create("div", {
+		class: `button icon is-${size} ${toggled_class(size !== "large", "has-tooltip-left")}`,
+		style: {
+			cursor: song === undefined ? "default" : "pointer",
+		},
+		disabled: song === undefined,
+		data: { tooltip: "Scrobble to Last.fm" },
+		onclick() {
+			lastfm.track_scrobble(song).then((response) => {
+				console.log(`Scrobble ${response["@attr"].accepted === 1 ? "success" : "failed" }:`, response)
+			})
+		},
+	},
+		create("i", { class: "fas fa-share" }),
+	);
+}
+
+
 export function generate_bsaber(song_hash: string | undefined): HTMLElement {
 	return create("a", {
 		class: "button icon is-large",

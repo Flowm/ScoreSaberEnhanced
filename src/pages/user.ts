@@ -5,6 +5,9 @@ import { create, into } from "../util/dom";
 import { check } from "../util/err";
 import { number_invariant } from "../util/format";
 import { get_song_hash_from_text } from "../util/song";
+import { LastFM } from "../util/lastfm";
+
+const lastfm = new LastFM();
 
 export function setup_dl_link_user_site(): void {
 	if (!is_user_page()) { return; }
@@ -16,12 +19,28 @@ export function setup_dl_link_user_site(): void {
 	const table_tr = check(table.querySelector("thead tr"));
 	into(table_tr, create("th", { class: "compact bs_link" }, "BS"));
 	into(table_tr, create("th", { class: "compact oc_link" }, "OC"));
+	into(table_tr, create("th", { class: "compact oc_link" }, "LFM"));
+	into(table_tr, create("th", { class: "compact oc_link" }, "SCR"));
 
 	// add a link for each song
 	const table_row = table.querySelectorAll("tbody tr");
 	for (const row of table_row) {
 		const image_link = check(row.querySelector<HTMLImageElement>("th.song img")).src;
 		const song_hash = get_song_hash_from_text(image_link);
+
+		// Extract song details from row
+		const song = {
+			mapper: <string> "",
+			name: <string> "",
+			artist: <string> "",
+		};
+		song.mapper = check(row.querySelector<HTMLElement>("th.song span.songTop.mapper")).innerText;
+		song.time = check(row.querySelector<HTMLElement>("th.song span.songBottom.time")).title;
+		const song_split = check(row.querySelector<HTMLElement>("th.song span.songTop.pp")).firstChild?.nodeValue?.split("-");
+		song.name = song_split[1].trim();
+		if (song_split[0].trim().length > 0) {
+			song.artist = song_split[0].trim();
+		}
 
 		// link to the website
 		into(row,
@@ -34,6 +53,18 @@ export function setup_dl_link_user_site(): void {
 		into(row,
 			create("th", { class: "compact oc_link" },
 				buttons.generate_oneclick(song_hash, "medium")
+			)
+		);
+
+		into(row,
+			create("th", { class: "compact oc_link" },
+				buttons.generate_lastfm_search(song, lastfm, "medium")
+			)
+		);
+
+		into(row,
+			create("th", { class: "compact oc_link" },
+				buttons.generate_lastfm_scrobble(song, lastfm, "medium")
 			)
 		);
 	}
