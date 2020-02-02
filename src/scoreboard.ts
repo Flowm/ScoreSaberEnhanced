@@ -49,6 +49,22 @@ function generate_oneclick_button(song_hash: string | undefined, size: BulmaSize
 	);
 }
 
+function generate_lastfm_button(song: object | undefined, size: BulmaSize): HTMLElement {
+	return create("div", {
+		class: `button icon is-${size} ${toggled_class(size !== "large", "has-tooltip-left")}`,
+		style: {
+			cursor: song === undefined ? "default" : "pointer",
+		},
+		disabled: song === undefined,
+		data: { tooltip: "Show on Last.fm" },
+		onclick() {
+			console.log(song)
+		},
+	},
+		create("i", { class: "fab lastfm-square" }),
+	);
+}
+
 function generate_bsaber_button(song_hash: string | undefined): HTMLElement {
 	return create("a", {
 		class: "button icon is-large",
@@ -116,6 +132,7 @@ export function setup_dl_link_user_site(): void {
 	const table_tr = check(table.querySelector("thead tr"));
 	into(table_tr, create("th", { class: "compact bs_link" }, "BS"));
 	into(table_tr, create("th", { class: "compact oc_link" }, "OC"));
+	into(table_tr, create("th", { class: "compact oc_link" }, "LFM"));
 
 	// add a link for each song
 	const table_row = table.querySelectorAll("tbody tr");
@@ -123,6 +140,19 @@ export function setup_dl_link_user_site(): void {
 		// there's only one link, so 'a' will find it.
 		const image_link = check(row.querySelector<HTMLImageElement>("th.song img")).src;
 		const song_hash = get_song_hash_from_text(image_link);
+
+		// Extract song details from row
+		const song = {
+			mapper: <string> "",
+			name: <string> "",
+			artist: <string> "",
+		};
+		song.mapper = check(row.querySelector<HTMLElement>("th.song span.songTop.mapper")).innerText;
+		const song_split = check(row.querySelector<HTMLElement>("th.song span.songTop.pp")).firstChild?.nodeValue?.split("-");
+		song.name = song_split[1].trim();
+		if (song_split[0].trim().length > 0) {
+			song.artist = song_split[0].trim();
+		}
 
 		// link to the website
 		into(row,
@@ -135,6 +165,12 @@ export function setup_dl_link_user_site(): void {
 		into(row,
 			create("th", { class: "compact oc_link" },
 				generate_oneclick_button(song_hash, "medium")
+			)
+		);
+
+		into(row,
+			create("th", { class: "compact oc_link" },
+				generate_lastfm_button(song, "medium")
 			)
 		);
 	}
