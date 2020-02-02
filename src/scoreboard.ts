@@ -5,6 +5,9 @@ import { create, into } from "./util/dom";
 import { check } from "./util/err";
 import { number_invariant, toggled_class } from "./util/format";
 import { fetch_song_info_by_hash, get_song_hash_from_text, oneclick_install } from "./util/song";
+import { LastFM } from "./util/lastfm";
+
+const lastfm = new LastFM();
 
 function new_page(link: string): void {
 	window.open(link, "_blank");
@@ -46,6 +49,44 @@ function generate_oneclick_button(song_hash: string | undefined, size: BulmaSize
 		},
 	},
 		create("i", { class: "fas fa-cloud-download-alt" }),
+	);
+}
+
+function generate_lastfm_search_button(song: object | undefined, size: BulmaSize): HTMLElement {
+	return create("div", {
+		class: `button icon is-${size} ${toggled_class(size !== "large", "has-tooltip-left")}`,
+		style: {
+			cursor: song === undefined ? "default" : "pointer",
+		},
+		disabled: song === undefined,
+		data: { tooltip: "Show on Last.fm" },
+		onclick() {
+			console.log(song)
+			lastfm.track_search(song).then((tracks) => {
+				console.log("Search results", tracks)
+				new_page(tracks[0].url)
+			})
+		},
+	},
+		create("i", { class: "fas fa-music" }),
+	);
+}
+
+function generate_lastfm_scrobble_button(song: object | undefined, size: BulmaSize): HTMLElement {
+	return create("div", {
+		class: `button icon is-${size} ${toggled_class(size !== "large", "has-tooltip-left")}`,
+		style: {
+			cursor: song === undefined ? "default" : "pointer",
+		},
+		disabled: song === undefined,
+		data: { tooltip: "Scrobble to Last.fm" },
+		onclick() {
+			lastfm.track_scrobble(song).then((response) => {
+				console.log("Scrobble response", response)
+			})
+		},
+	},
+		create("i", { class: "fas fa-share" }),
 	);
 }
 
@@ -116,6 +157,8 @@ export function setup_dl_link_user_site(): void {
 	const table_tr = check(table.querySelector("thead tr"));
 	into(table_tr, create("th", { class: "compact bs_link" }, "BS"));
 	into(table_tr, create("th", { class: "compact oc_link" }, "OC"));
+	into(table_tr, create("th", { class: "compact oc_link" }, "LFM"));
+	into(table_tr, create("th", { class: "compact oc_link" }, "SCR"));
 
 	// add a link for each song
 	const table_row = table.querySelectorAll("tbody tr");
@@ -123,6 +166,20 @@ export function setup_dl_link_user_site(): void {
 		// there's only one link, so 'a' will find it.
 		const image_link = check(row.querySelector<HTMLImageElement>("th.song img")).src;
 		const song_hash = get_song_hash_from_text(image_link);
+
+		// Extract song details from row
+		const song = {
+			mapper: <string> "",
+			name: <string> "",
+			artist: <string> "",
+		};
+		song.mapper = check(row.querySelector<HTMLElement>("th.song span.songTop.mapper")).innerText;
+		song.time = check(row.querySelector<HTMLElement>("th.song span.songBottom.time")).title;
+		const song_split = check(row.querySelector<HTMLElement>("th.song span.songTop.pp")).firstChild?.nodeValue?.split("-");
+		song.name = song_split[1].trim();
+		if (song_split[0].trim().length > 0) {
+			song.artist = song_split[0].trim();
+		}
 
 		// link to the website
 		into(row,
@@ -135,6 +192,18 @@ export function setup_dl_link_user_site(): void {
 		into(row,
 			create("th", { class: "compact oc_link" },
 				generate_oneclick_button(song_hash, "medium")
+			)
+		);
+
+		into(row,
+			create("th", { class: "compact oc_link" },
+				generate_lastfm_search_button(song, "medium")
+			)
+		);
+
+		into(row,
+			create("th", { class: "compact oc_link" },
+				generate_lastfm_scrobble_button(song, "medium")
 			)
 		);
 	}
